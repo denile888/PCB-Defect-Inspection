@@ -1,0 +1,16 @@
+# PCB dataset - do not upload
+data/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code settings
+.vscode/
+
+# Model training outputs
+runs/
