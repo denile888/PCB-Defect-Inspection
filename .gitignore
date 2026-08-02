@@ -1,6 +1,3 @@
-# PCB dataset - do not upload
-data/
-
 # Jupyter checkpoints
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
