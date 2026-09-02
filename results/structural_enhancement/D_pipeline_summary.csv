@@ -1,0 +1,8 @@
+variant,F1 mean,F1 std,FOM mean,FOM std,precision,recall,time (ms)
+1 Baseline (Gaussian + fixed Canny),0.622,0.1456,0.347,0.0547,0.5248,0.8416,6.0598
+2 + intensity-Otsu thresholds,0.4932,0.1656,0.3395,0.0929,0.3545,0.9448,7.6266
+3 + gradient-domain thresholds,0.4958,0.1714,0.3459,0.102,0.3553,0.9611,13.3777
+4 + noise-scaled threshold floor,0.5962,0.1621,0.3647,0.0717,0.4873,0.9091,12.5231
+5 + morphological repair,0.6252,0.1531,0.4137,0.0983,0.5209,0.9004,26.2114
+6 Proposed (+ noise-adaptive filter),0.6615,0.1415,0.4193,0.1075,0.575,0.875,40.4403
+7 Proposed with Sobel + Otsu,0.731,0.147,0.622,0.1808,0.6366,0.9302,49.6733

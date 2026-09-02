@@ -11,3 +11,7 @@ __pycache__/
 
 # Model training outputs
 runs/
+
+data/
+*.pt
+__pycache__/

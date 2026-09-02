@@ -1,0 +1,10 @@
+config,technique,setting,parameters
+A1,Gaussian,light,"ksize=3, sigma=0.8"
+A2,Gaussian,medium,"ksize=5, sigma=1.5"
+A3,Gaussian,heavy,"ksize=9, sigma=2.5"
+B1,Canny edge,weak,"low=100, high=200, weight=0.3"
+B2,Canny edge,medium,"low=50, high=150, weight=0.5"
+B3,Canny edge,strong,"low=30, high=90, weight=0.7"
+C1,Morphological,small,ksize=5
+C2,Morphological,medium,ksize=15
+C3,Morphological,large,ksize=25
