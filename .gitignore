@@ -11,7 +11,13 @@ __pycache__/
 
 # Model training outputs
 runs/
-
 data/
-*.pt
 __pycache__/
+
+# Large datasets
+data/clean/dataset_limszeping_set1/
+data/clean/dataset_limszeping_set2/
+data/clean/dataset_limszeping_set3/
+
+# YOLO model files
+*.pt
