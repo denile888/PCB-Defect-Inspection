@@ -20,7 +20,7 @@ app is built to accept, is a single photograph.
 ## Setup
 
 ```
-pip install streamlit opencv-python numpy pandas ultralytics fpdf2 pillow
+pip install streamlit opencv-python numpy pandas ultralytics fpdf2 pillow scipy PyWavelets
 ```
 
 ## Run
@@ -37,12 +37,15 @@ switch to genuine YOLO detection.
 ## Files
 
 ```
-app.py                  the Streamlit application
-core/preprocessing.py   grayscale Gaussian / Canny / morphological / combined
-core/contours.py        contour extraction (reference-based + fallback)
-core/report.py          PDF report generation
-core/discovery.py       auto-detects reference boards + trained weights
-                        from the surrounding project folder
+app.py                       the Streamlit application
+core/preprocessing.py        melvinwongkakian's own techniques (grayscale
+                             Gaussian / Canny / morphological / combined)
+core/teammate_techniques.py  Lee Wan Ching's and Lim Sze Ping's techniques,
+                             reproduced from their own notebooks
+core/contours.py             contour extraction (reference-based + fallback)
+core/report.py               PDF report generation
+core/discovery.py            auto-detects reference boards + trained
+                             weights from the surrounding project folder
 ```
 
 Every file has a module-level docstring explaining its role, and every
@@ -51,6 +54,38 @@ is not obvious - why. `app.py`'s docstring also explains Streamlit's
 execution model (the whole script reruns on every interaction), since
 that is the one thing about this file that is not self-evident to someone
 who has not used Streamlit before.
+
+## The three-person technique menu
+
+The sidebar lists all three contributors together - **You**, **Lee Wan
+Ching**, **Lim Sze Ping** - each with their name on the left and their own
+technique choices in a dropdown to the right. Only one technique is ever
+actually applied to an image at a time: touching any person's dropdown
+makes their choice the active one (a sidebar banner always states which),
+and the others stay visible and remembered for comparison rather than
+disappearing. This is deliberate - chaining all three people's pipelines
+onto the same image at once was never validated by anyone and would
+produce a result nobody tested, so exactly one is ever live.
+
+The app opens with melvinwongkakian's confirmed winning configuration
+active, not either teammate's technique - see "Design notes" below for why.
+
+Lee Wan Ching's and Lim Sze Ping's functions and parameter sets are
+reproduced from their own notebooks, not re-derived or approximated:
+
+- Lee Wan Ching - `notebook/leewanching/pipeline_leewanching.ipynb`
+  (homomorphic filtering, then Wiener denoising, then DWT detail
+  enhancement)
+- Lim Sze Ping - `notebook/limszeping/prepare_limszeping.ipynb`, cell 10
+  (CLAHE, then gamma correction, then Laplacian sharpening - the cell that
+  actually built her real dataset; an earlier exploratory cell in the same
+  notebook defines a different, abandoned parameter set)
+
+Their three named parameter sets each (`set1`/`set2`/`set3`) are copied
+verbatim, including the exact numbers, from those notebooks. Changing
+either teammate's algorithm should happen in `core/teammate_techniques.py`
+directly, with a note pointing back to whichever notebook cell was edited
+to match, so the two never drift apart silently.
 
 ## How to use it
 
@@ -78,8 +113,8 @@ always overrides the auto-detected one; to go back to it, restart the app.
 
 1. **Upload one or more board images** - select multiple files or an entire
    folder's contents at once.
-2. **Preprocessing tab** - preview any of the ten grayscale techniques.
-   Defaults to the winning configuration (see below).
+2. **Preprocessing tab** - preview whichever technique is currently active
+   (see the three-person menu above).
 3. **Detection & Contours tab** - see boxes (red) and contours (yellow) per
    image, plus a results table. Each image's caption shows which reference
    board was used and where it came from.
@@ -90,20 +125,28 @@ always overrides the auto-detected one; to go back to it, restart the app.
 
 ## Design notes worth knowing before extending this
 
+**A wavelet transform can shift image dimensions by one pixel on odd
+inputs - confirmed on a real board in this dataset.** Lee Wan Ching's DWT
+detail-enhancement step reconstructs 1921x2904 as 1922x2904 (all three of
+her wavelets do this; it is a boundary-padding property of the transform,
+not a mistake in her code). Tested and caught before it could silently
+misalign bounding boxes drawn on top of her processed output. The fix
+(`_match_original_shape` in `core/teammate_techniques.py`) crops back to
+the original size and is clearly marked as an addition on top of her
+algorithm, not part of it - so anyone comparing this file against her
+notebook can see exactly what was and was not changed.
+
 **The app defaults to the team's confirmed winning configuration**, not to
-"no preprocessing". The sidebar's Technique selector opens on
-`A3 heavy Gaussian + B2 medium Canny` - seed-verified across multiple
-training runs to outperform every individual technique on its own - and
-says so directly in the sidebar, so this isn't just an implementation
-detail buried in code. The dropdown stays fully switchable (to `none`, or
-to any individual technique) for demos and side-by-side comparison; what
-changed is which option loads automatically, so the deployed system uses
-the study's actual result unless someone deliberately picks something else.
-`DEFAULT_TECHNIQUE` in `core/preprocessing.py` is the single place this is
-set - change it there if a later result supersedes A3+B2.
+"no preprocessing" and not to either teammate's technique. The sidebar
+opens on `A3 heavy Gaussian + B2 medium Canny` - seed-verified across
+multiple training runs to outperform every individual technique on its
+own - and says so directly in the sidebar. Everyone's options stay fully
+visible and switchable for demos and comparison; what changed is which one
+loads automatically. `DEFAULT_TECHNIQUE` in `core/preprocessing.py` is the
+single place this is set.
 
 **A manual weights upload used to be able to crash the whole app.** Caught
-while testing the auto-detection feature above: uploading a corrupted or
+while testing the auto-detection feature: uploading a corrupted or
 non-model `.pt` file raised an unhandled exception all the way up through
 Streamlit. The fix wraps that load in a try/except, matching what the
 auto-load path already did - an invalid upload now shows a sidebar error

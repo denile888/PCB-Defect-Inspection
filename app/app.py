@@ -59,6 +59,7 @@ from core.preprocessing import TECHNIQUES, DEFAULT_TECHNIQUE, apply_technique, t
 from core.contours import find_contour, find_all_defects_by_reference, draw_contour
 from core.report import build_report
 from core.discovery import find_project_root, find_matching_reference, discover_trained_weights
+from core.teammate_techniques import CONTRIBUTORS
 
 CLASS_NAMES = ["missing_hole", "mouse_bite", "open_circuit",
               "short", "spur", "spurious_copper"]
@@ -250,25 +251,42 @@ def resolve_reference(filename, manual_reference_gray):
 st.sidebar.title("Configuration")
 
 st.sidebar.subheader("Preprocessing")
+st.sidebar.caption(
+    "Each contributor's own techniques are listed under their name. "
+    "Picking any option makes it the active one - the others stay "
+    "visible for comparison, but only one drives detection at a time.")
 
-# The list order matters here: DEFAULT_TECHNIQUE must be a member of it so
-# .index() can find it. "none" is included so the winner can still be
-# switched off entirely, e.g. to show the un-processed baseline in a demo.
+if "active_owner" not in st.session_state:
+    # Defaults to the team's confirmed winner (melvinwongkakian's A3+B2),
+    # not to either teammate's technique - see DEFAULT_TECHNIQUE in
+    # core/preprocessing.py for that decision. Touching any dropdown below
+    # changes this via its on_change callback.
+    st.session_state.active_owner = "melvin"
+
+
+def _set_active_owner(owner):
+    """on_change callback: whichever dropdown was just touched becomes the
+    active technique. Streamlit runs this before the script reruns, so by
+    the time the rest of this file reads active_owner, it is already
+    up to date."""
+    st.session_state.active_owner = owner
+
+
+# --- melvinwongkakian's own techniques ---------------------------------
+name_col, select_col = st.sidebar.columns([1, 2])
+name_col.markdown("**Melvin Wong Ka Kian**")
 technique_choices = ["none"] + list(TECHNIQUES)
-technique_name = st.sidebar.selectbox(
+technique_name = select_col.selectbox(
     "Technique", technique_choices,
     index=technique_choices.index(DEFAULT_TECHNIQUE),
+    label_visibility="collapsed", key="melvin_technique",
+    on_change=_set_active_owner, args=("melvin",),
     help="Applied before detection runs, and previewed in the first tab. "
-         "Defaults to the team's validated best-performing configuration - "
-         "change this to compare against another technique or against no "
-         "preprocessing at all.")
-if technique_name == DEFAULT_TECHNIQUE:
-    st.sidebar.caption(
-        "This is the team's confirmed winning configuration from the "
-        "comparative study, not just this app's default choice.")
+         "Defaults to the team's validated best-performing configuration.")
+
 technique_params = {}
 if technique_name != "none":
-    with st.sidebar.expander("Parameters", expanded=False):
+    with st.sidebar.expander("Melvin Wong Ka Kian's parameters", expanded=False):
         if technique_name.startswith("gaussian"):
             technique_params["ksize"] = st.slider("Kernel size", 3, 15, 5, step=2)
             technique_params["sigma"] = st.slider("Sigma", 0.1, 4.0, 1.0)
@@ -278,6 +296,54 @@ if technique_name != "none":
             technique_params["weight"] = st.slider("Edge weight", 0.0, 1.0, 0.5)
         elif technique_name.startswith("morph"):
             technique_params["ksize"] = st.slider("Structuring element size", 3, 31, 15, step=2)
+
+# --- teammates' techniques -----------------------------------------
+# Reproduced from their own notebooks - see core/teammate_techniques.py
+# for the exact source and the parameter values, copied verbatim from
+# their code rather than re-derived here.
+teammate_choices = {}   # owner_key -> the set name currently selected
+
+for owner_key, display_name in [("lee", "Lee Wan Ching"), ("lim", "Lim Sze Ping")]:
+    contributor = CONTRIBUTORS[display_name]
+    name_col, select_col = st.sidebar.columns([1, 2])
+    name_col.markdown(f"**{display_name}**")
+    chosen_set = select_col.selectbox(
+        display_name, list(contributor["sets"]),
+        format_func=lambda s: s.replace("set", "Set "),
+        label_visibility="collapsed", key=f"{owner_key}_technique",
+        on_change=_set_active_owner, args=(owner_key,))
+    teammate_choices[owner_key] = chosen_set
+
+    with st.sidebar.expander(f"{display_name}'s parameters", expanded=False):
+        st.json(contributor["sets"][chosen_set])
+
+# --- resolve which one is actually active -------------------------------
+active_owner = st.session_state.active_owner
+
+if active_owner == "melvin":
+    active_label = technique_name
+    active_params = technique_params
+
+    def apply_active_technique(image_bgr):
+        return apply_technique(image_bgr, technique_name, **technique_params)
+else:
+    owner_names = {"lee": "Lee Wan Ching", "lim": "Lim Sze Ping"}
+    display_name = owner_names[active_owner]
+    chosen_set = teammate_choices[active_owner]
+    contributor = CONTRIBUTORS[display_name]
+    active_label = f"{display_name} - {chosen_set.replace('set', 'Set ')}"
+    active_params = contributor["sets"][chosen_set]
+
+    def apply_active_technique(image_bgr, _fn=contributor["function"],
+                               _params=active_params):
+        return _fn(image_bgr, **_params)
+
+st.sidebar.divider()
+st.sidebar.success(f"Active: {active_label}")
+if active_owner == "melvin" and technique_name == DEFAULT_TECHNIQUE:
+    st.sidebar.caption(
+        "This is the team's confirmed winning configuration from the "
+        "comparative study, not just this app's default choice.")
 
 st.sidebar.subheader("Detection")
 
@@ -415,8 +481,8 @@ else:
 
         processed_bgr = image_bgr
         processed_gray = None
-        if technique_name != "none":
-            processed_gray = apply_technique(image_bgr, technique_name, **technique_params)
+        if active_label != "none":
+            processed_gray = apply_active_technique(image_bgr)
             processed_bgr = cv2.cvtColor(processed_gray, cv2.COLOR_GRAY2BGR)
 
         # ---------------- Preprocessing tab ----------------
@@ -426,8 +492,8 @@ else:
             col_before, col_after = st.columns(2)
             col_before.image(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB),
                              caption="Original", width='stretch')
-            if technique_name != "none":
-                col_after.image(processed_gray, caption=f"Processed ({technique_name})",
+            if active_label != "none":
+                col_after.image(processed_gray, caption=f"Processed ({active_label})",
                                width='stretch', clamp=True)
             else:
                 col_after.info("Select a technique in the sidebar to see it here.")
@@ -437,7 +503,7 @@ else:
         # trained on. original_gray / reference_gray feed the classical
         # fallback and every contour refinement - see run_detection() and
         # annotate() for why those two paths must not mix.
-        detect_source = processed_bgr if technique_name != "none" else image_bgr
+        detect_source = processed_bgr if active_label != "none" else image_bgr
         detections = run_detection(detect_source, original_gray, reference_gray,
                                    sensitivity, conf_threshold)
         annotated, rows = annotate(image_bgr, original_gray, detections,
@@ -519,7 +585,7 @@ with tab_dashboard:
             # (including anything processed since the last click).
             pdf_bytes = build_report(
                 df, st.session_state.annotated_images,
-                technique_name=technique_name,
+                technique_name=active_label,
                 model_name=st.session_state.model_name,
             )
             st.download_button(
