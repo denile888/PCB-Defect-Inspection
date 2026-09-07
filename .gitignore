@@ -21,3 +21,6 @@ data/clean/dataset_limszeping_set3/
 
 # YOLO model files
 *.pt
+
+app/uploaded_weights/
+__pycache__/
