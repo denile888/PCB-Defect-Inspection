@@ -11,7 +11,6 @@ __pycache__/
 
 # Model training outputs
 runs/
-data/dataset_limszeping_set1
 data/dataset_limszeping_set2
 data/dataset_limszeping_set3
 data/enhanced dataset
