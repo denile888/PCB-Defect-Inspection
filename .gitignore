@@ -11,13 +11,33 @@ __pycache__/
 
 # Model training outputs
 runs/
-data/
+data/dataset_limszeping_set1
+data/dataset_limszeping_set2
+data/dataset_limszeping_set3
+data/enhanced dataset
+data/processed
+data/processed/pcb_A1
+data/processed/pcb_A1B1
+data/processed/pcb_A1B2
+data/processed/pcb_A1B3
+data/processed/pcb_A2 
+data/processed/pcb_A2B1
+data/processed/pcb_A2B2
+data/processed/pcb_A2B3
+data/processed/pcb_A3 
+data/processed/pcb_A3B1
+data/processed/pcb_A3B2
+data/processed/pcb_A3B3
+data/processed/pcb_B1 
+data/processed/pcb_B2
+data/processed/pcb_B3 
+data/processed/pcb_C1
+data/processed/pcb_C2
+data/processed/pcb_C3
+data/YOLO
+
 __pycache__/
 
-# Large datasets
-data/clean/dataset_limszeping_set1/
-data/clean/dataset_limszeping_set2/
-data/clean/dataset_limszeping_set3/
 
 # YOLO model files
 *.pt
